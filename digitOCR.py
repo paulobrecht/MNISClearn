@@ -62,16 +62,15 @@ def rowToGrid(inObj, rowLen, gridSqDim):
 # compute row and col averages
 def rcAvg(inObj, gridSqDim):
     """This takes in a list of lists, representing a NxN square grid with by-row loading
-    e.g. [[1, 2], [3, 4]] represents a 2x2 grid of row1=1,2 // row2=3,4
     and returns a list of tuples: [(row avg 1, col avg 1), (row avg 2, col avg 2), ...]
     """
     flt = float(gridSqDim)
     rowAvg = []
     colAvg = []
-    for row in inObj: # row sum
+    for row in inObj: # row avg
         ra = sum(row)/flt
         rowAvg.append(ra)
-    for col in range(0, gridSqDim): # col sum
+    for col in range(0, gridSqDim): # col avg
         ca = sum([inObj[i][col] for i in range(0, gridSqDim)])/flt
         colAvg.append(ca)
     zipped = zip(rowAvg, colAvg) # create list of tuples
@@ -121,13 +120,12 @@ for i in index:
     x2shuf.append(x2[i])
     y2shuf.append(y2[i])
 
-# running this even with 4-fold validation, just a couple of K values, and a non-brute knn algorithm
-# took forever. To save time, I do model selection on a random 25% sample of the training data.
+# model selection on a random 25% sample of the training data
 x2shuf = x2shuf[1:len(x2)/4]
 y2shuf = y2shuf[1:len(x2)/4]
 
 # 4-fold cross-validation
-kf = KFold(len(x2shuf), n_folds=4) # define 4 folds -- too much data for my old computer to handle more than that
+kf = KFold(len(x2shuf), n_folds=4) # define 4 folds
 
 results = []
 loop = 0
@@ -137,27 +135,26 @@ for train, test in kf: # iterate over folds
     trainY = ravel([y2shuf[i] for i in train]) 
     testY = ravel([y2shuf[i] for i in test])
 
-    for k in KsToTry: # I tried 1 to 201 by 20 at first, and found 1 was best. On 2nd pass, zooming in on 1:10 to see what's best.
+    for k in KsToTry:
         knn = KNeighborsClassifier(n_neighbors=k, algorithm='ball_tree', n_jobs=16)
 
         # fit on 3/4, score on 1/4
         knn.fit(trainX, trainY)
         pred = knn.predict(testX)
         
-        # Error rate (well, correct prediction rate)
+        # correct prediction rate)
         c = 0
         for num in range(len(pred)):
             if pred[num] == testY[num]:
                 c += 1
 
         # save the correct prediction rate to a tuple for evaluation after the loop has completed
-        # this should be a dict with k as the key, but I didn't have time
+        # this should be a dict with k as the key, someday when I have time
         myresult = (k, loop, c, len(pred))
         results.append(myresult) 
     loop += 1
 
 # Collate and report results
-# I know this is awful, but I just wanted results.
 collatedResults = {}
 for k in KsToTry:
     correct=0
@@ -175,7 +172,7 @@ orderedResults = sorted(collatedResults.iteritems(), key=lambda x: x[1], reverse
 
 optimalK = orderedResults[0][0] # choose the best-performing K
 
-knn = KNeighborsClassifier(n_neighbors=optimalK, n_jobs=-1) # train with optimalK
+knn = KNeighborsClassifier(n_neighbors=optimalK, n_jobs=16) # train with optimalK
 knn.fit(x2, ravel(y2)) # train on entire training dataset
 pred = knn.predict(t2) # score the validation data
 
