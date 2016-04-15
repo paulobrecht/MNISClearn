@@ -227,15 +227,15 @@ pred = knn.predict(t2) # score the validation data
 #===========================================================================
 # OUTPUT
 
-z = open(mypath + 'compusrv_submission10k.csv', 'w')
+z = open(outpath + 'compusrv_submission10k.csv', 'w')
 for value in pred:
   print>>z, value
 
-z2 = open(mypath + 'compusrv_submission10k_facts1.txt', 'w')
+z2 = open(outpath + 'compusrv_submission10k_facts1.txt', 'w')
 print>>z2, optimalK
 
-z3 = open(mypath + 'compusrv_submission10k_facts2.txt', 'w')
+z3 = open(outpath + 'compusrv_submission10k_facts2.txt', 'w')
 print>>z3, orderedResults
 
-z3 = open(mypath + 'compusrv_submission10k_facts3.txt', 'w')
+z3 = open(outpath + 'compusrv_submission10k_facts3.txt', 'w')
 print>>z3, wrong
