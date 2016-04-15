@@ -9,7 +9,7 @@ KsToTry = range(1, 21)
 #===========================================================================
 # imports
 
-from numpy import ravel
+from numpy import ravel, mean, std, cov
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.cross_validation import KFold
 from random import shuffle, seed
@@ -28,7 +28,7 @@ seed(8675309)
 
 # Read csv matrix into list of lists
 def readCSV(inFile):
-    """This reads a multi-column integer-only CSV file and assigns its cell values to a list of lists."
+    """This reads a multi-column integer-only CSV file and assigns its cell values to a list of lists.
     It assumes there are no quoted cells and all commas are field separators.
     """
     x = open(inFile, 'r')
@@ -76,15 +76,49 @@ def rcAvg(inObj, gridSqDim):
     zipped = zip(rowAvg, colAvg) # create list of tuples
     return zipped
 
+# compute mean, std, and pct of white space within bounding box
+def rcSummary(inObj, gridSqDim):
+    """This takes in a list of lists, representing a NxN square grid with by-row loading
+    and returns a list of tuples: [(row avg 1, col avg 1), (row avg 2, col avg 2), ...]
+    """
+    flt = float(gridSqDim)
+    rowAvg = [] # row average
+    colAvg = [] # col average
+
+    i = 0
+    rz = []
+    for row in inObj: # row avg
+        ra = sum(row)/flt
+        rowAvg.append(ra) # append to list of row avgs for this grid
+        if ra > 0:
+            rz.append(i)
+        i += 1
+
+    i = 0
+    cz = []
+    for col in range(0, gridSqDim): # col avg
+        ca = sum([inObj[i][col] for i in range(0, gridSqDim)])/flt
+        colAvg.append(ca) # append to list of col avgs for this grid
+        if ca > 0:
+            cz.append(col)
+        i += 1
+
+    c1 = cov(rowAvg, colAvg)
+    outObj = [float(c1[i][j]) for i in range(2) for j in range(2)]
+    cond = [inObj[i][j] for i in rz for j in cz]
+    condWhite = cond.count(0)/float(len(cond))
+
+    outObj.append(condWhite) # four covariance matrix entries plus the % empty pixes in the character bounding box
+    return outObj
+
 # compute row col averages for each 28x28 image and
 # append those averages to the training and validation data
 def gridAppend(inObj1, inObj2, gridSqDim):
     """Very special purpose."""
     i = 0
     for grid in inObj1:
-        for tup in rcAvg(grid, gridSqDim):
-            inObj2[i].append(tup[0])
-            inObj2[i].append(tup[1])
+        for item in rcSummary(grid, gridSqDim):
+            inObj2[i].append(item)
         i += 1
 
 #===========================================================================
@@ -106,8 +140,6 @@ gridAppend(x3, x2, 28)
 t3 = rowToGrid(t2, 784, 28)
 gridAppend(t3, t2, 28)
 
-
-
 #===========================================================================
 # MODEL SELECTION
 
@@ -120,15 +152,18 @@ for i in index:
     x2shuf.append(x2[i])
     y2shuf.append(y2[i])
 
-# model selection on a random 25% sample of the training data
-x2shuf = x2shuf[1:len(x2)/4]
-y2shuf = y2shuf[1:len(x2)/4]
+# model selection on a random 33% sample of the training data
+#x2shuf = x2shuf[1:len(x2)/3]
+#y2shuf = y2shuf[1:len(x2)/3]
+#x2shuf = x2shuf[1:100] #testing
+#y2shuf = y2shuf[1:100] #testing
 
 # 4-fold cross-validation
 kf = KFold(len(x2shuf), n_folds=4) # define 4 folds
 
-results = []
 loop = 0
+results = []
+wrong = []
 for train, test in kf: # iterate over folds
     trainX = [x2shuf[i] for i in train]
     testX = [x2shuf[i] for i in test]
@@ -145,8 +180,11 @@ for train, test in kf: # iterate over folds
         # correct prediction rate)
         c = 0
         for num in range(len(pred)):
+            tup = (loop, k, testY[num], pred[num]) # output incorrect predictions for investigating later
             if pred[num] == testY[num]:
                 c += 1
+            else:
+                wrong.append(tup)
 
         # save the correct prediction rate to a tuple for evaluation after the loop has completed
         # this should be a dict with k as the key, someday when I have time
@@ -174,6 +212,7 @@ optimalK = orderedResults[0][0] # choose the best-performing K
 
 knn = KNeighborsClassifier(n_neighbors=optimalK, n_jobs=16) # train with optimalK
 knn.fit(x2, ravel(y2)) # train on entire training dataset
+knn.fit(x2[1:100], ravel(y2[1:100])) # testing
 pred = knn.predict(t2) # score the validation data
 
 #===========================================================================
@@ -184,7 +223,10 @@ for value in pred:
   print>>z, value
 
 z2 = open(mypath + 'compusrv_submission10k_facts1.csv', 'w')
-print>>z2, semiOptimalK
+print>>z2, optimalK
 
 z3 = open(mypath + 'compusrv_submission10k_facts2.csv', 'w')
 print>>z3, orderedResults
+
+z3 = open(mypath + 'compusrv_submission10k_facts3.csv', 'w')
+print>>z3, wrong
