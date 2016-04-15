@@ -1,8 +1,9 @@
 #===========================================================================
 # options
 
-mypath = '/home/pobrecht/Dropbox/ML310/Week1/mnist/data/'
-KsToTry = range(1, 21)
+inpath = '/home/pobrecht/Dropbox/ML310/Week1/mnist/data/'
+outpath = '/home/pobrecht/Dropbox/ML310/Week1/mnist/'
+KsToTry = range(1, 15)
 
 
 
@@ -33,6 +34,7 @@ def readCSV(inFile):
     """
     x = open(inFile, 'r')
 
+    print("Reading " + inFile + "...")
     outObj = []
     line = x.readline()
     while line:
@@ -124,9 +126,9 @@ def gridAppend(inObj1, inObj2, gridSqDim):
 #===========================================================================
 # READ DATA
 
-x2 = readCSV(mypath + 'mnist_trn_X.csv') # Read in training design matrix
-y2 = readCSV(mypath + 'mnist_trn_y.txt') # Read in training Ys
-t2 = readCSV(mypath + 'mnist_tst_X.csv') # Read in validation Xs
+x2 = readCSV(inpath + 'mnist_trn_X.csv') # Read in training design matrix
+y2 = readCSV(inpath + 'mnist_trn_y.txt') # Read in training Ys
+t2 = readCSV(inpath + 'mnist_tst_X.csv') # Read in validation Xs
 
 
 
@@ -140,6 +142,8 @@ gridAppend(x3, x2, 28)
 t3 = rowToGrid(t2, 784, 28)
 gridAppend(t3, t2, 28)
 
+
+
 #===========================================================================
 # MODEL SELECTION
 
@@ -152,9 +156,9 @@ for i in index:
     x2shuf.append(x2[i])
     y2shuf.append(y2[i])
 
-# model selection on a random 33% sample of the training data
-#x2shuf = x2shuf[1:len(x2)/3]
-#y2shuf = y2shuf[1:len(x2)/3]
+# model selection on a random 20% sample of the training data
+x2shuf = x2shuf[1:len(x2)/5]
+y2shuf = y2shuf[1:len(x2)/5]
 #x2shuf = x2shuf[1:100] #testing
 #y2shuf = y2shuf[1:100] #testing
 
@@ -171,13 +175,13 @@ for train, test in kf: # iterate over folds
     testY = ravel([y2shuf[i] for i in test])
 
     for k in KsToTry:
-        knn = KNeighborsClassifier(n_neighbors=k, algorithm='ball_tree', n_jobs=16)
+        knn = KNeighborsClassifier(n_neighbors=k, algorithm='ball_tree', n_jobs=20)
 
-        # fit on 3/4, score on 1/4
+        # train on 3/4, test on 1/4
         knn.fit(trainX, trainY)
         pred = knn.predict(testX)
         
-        # correct prediction rate)
+        # correct prediction rate
         c = 0
         for num in range(len(pred)):
             tup = (loop, k, testY[num], pred[num]) # output incorrect predictions for investigating later
@@ -190,6 +194,7 @@ for train, test in kf: # iterate over folds
         # this should be a dict with k as the key, someday when I have time
         myresult = (k, loop, c, len(pred))
         results.append(myresult) 
+        print("Finished Loop " + str(loop+1) + " for K = " + str(k))
     loop += 1
 
 # Collate and report results
@@ -205,15 +210,19 @@ for k in KsToTry:
 
 orderedResults = sorted(collatedResults.iteritems(), key=lambda x: x[1], reverse=True)
 
+
+
 #===========================================================================
 # SCORE THE VALIDATION DATA
 
 optimalK = orderedResults[0][0] # choose the best-performing K
 
-knn = KNeighborsClassifier(n_neighbors=optimalK, n_jobs=16) # train with optimalK
+knn = KNeighborsClassifier(n_neighbors=optimalK, n_jobs=20) # train with optimalK
 knn.fit(x2, ravel(y2)) # train on entire training dataset
 knn.fit(x2[1:100], ravel(y2[1:100])) # testing
 pred = knn.predict(t2) # score the validation data
+
+
 
 #===========================================================================
 # OUTPUT
@@ -222,11 +231,11 @@ z = open(mypath + 'compusrv_submission10k.csv', 'w')
 for value in pred:
   print>>z, value
 
-z2 = open(mypath + 'compusrv_submission10k_facts1.csv', 'w')
+z2 = open(mypath + 'compusrv_submission10k_facts1.txt', 'w')
 print>>z2, optimalK
 
-z3 = open(mypath + 'compusrv_submission10k_facts2.csv', 'w')
+z3 = open(mypath + 'compusrv_submission10k_facts2.txt', 'w')
 print>>z3, orderedResults
 
-z3 = open(mypath + 'compusrv_submission10k_facts3.csv', 'w')
+z3 = open(mypath + 'compusrv_submission10k_facts3.txt', 'w')
 print>>z3, wrong
