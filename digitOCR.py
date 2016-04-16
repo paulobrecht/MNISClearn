@@ -3,8 +3,9 @@
 
 inpath = '/home/pobrecht/Dropbox/ML310/Week1/mnist/data/'
 outpath = '/home/pobrecht/Dropbox/ML310/Week1/mnist/'
-prefix = 'covwhite'
-KsToTry = range(1, 10)
+prefix = 'TwoScale'
+KsToTry = 5
+njobs = 20
 
 
 
@@ -79,6 +80,32 @@ def rcAvg(inObj, gridSqDim):
     zipped = zip(rowAvg, colAvg) # create list of tuples
     return zipped
 
+# halve the resolution
+def rcTwoScale(inObj, gridSqDim):
+    flt = float(4)
+    newgrid = []
+    for i in range(0, gridSqDim-1, 2): # row avg
+        n = []
+        for j in range(0, gridSqDim-1, 2):
+            ap = (inObj[i][j]+inObj[i+1][j]+inObj[i][j+1]+inObj[i+1][j+1])/flt
+            newgrid.append(ap)
+    return newgrid
+
+# halve the resolution
+def rcThreeScale(inObj, gridSqDim):
+    flt = float(4)
+    newgrid = []
+    for i in range(0, gridSqDim-1, 2): # row avg
+        for j in range(0, gridSqDim-1, 2):
+            ap = (inObj[i][j]+inObj[i+1][j]+inObj[i][j+1]+inObj[i+1][j+1])/flt
+            newgrid.append(ap)
+    for i in range(0, gridSqDim/2-1, 2): # row avg
+        for j in range(0, gridSqDim/2-1, 2):
+            ap = (inObj[i][j]+inObj[i+1][j]+inObj[i][j+1]+inObj[i+1][j+1])/flt
+            newgrid.append(ap)
+    return newgrid
+
+
 # compute mean, std, and pct of white space within bounding box
 def rcSummary(inObj, gridSqDim):
     """This takes in a list of lists, representing a NxN square grid with by-row loading
@@ -146,7 +173,7 @@ def gridAppend(inObj1, inObj2, gridSqDim):
     """Very special purpose."""
     i = 0
     for grid in inObj1:
-        for item in rcSummary(grid, gridSqDim):
+        for item in rcThreeScale(grid, gridSqDim):
             inObj2[i].append(item)
         i += 1
 
@@ -201,8 +228,8 @@ for train, test in kf: # iterate over folds
     trainY = ravel([y2shuf[i] for i in train]) 
     testY = ravel([y2shuf[i] for i in test])
 
-    for k in KsToTry:
-        knn = KNeighborsClassifier(n_neighbors=k, algorithm='ball_tree', n_jobs=20)
+    for k in range(1, KsToTry + 1):
+        knn = KNeighborsClassifier(n_neighbors=k, algorithm='ball_tree', n_jobs=njobs)
 
         # train on 3/4, test on 1/4
         knn.fit(trainX, trainY)
@@ -226,7 +253,7 @@ for train, test in kf: # iterate over folds
 
 # Collate and report results
 collatedResults = {}
-for k in KsToTry:
+for k in range(1, KsToTry + 1):
     correct=0
     total=0
     for item in results:
@@ -251,7 +278,7 @@ optimalK = orderedResults[0][0] # choose the best-performing K
 z2 = open(outpath + prefix + '_submission10k_facts1.txt', 'w')
 print>>z2, optimalK
 
-knn = KNeighborsClassifier(n_neighbors=optimalK, n_jobs=20) # train with optimalK
+knn = KNeighborsClassifier(n_neighbors=optimalK, n_jobs=njobs) # train with optimalK
 print("Fitting on whole population of training data with K = " + str(optimalK) + "...")
 knn.fit(x2, ravel(y2)) # train on entire training dataset
 # knn.fit(x2[1:100], ravel(y2[1:100])) # testing
