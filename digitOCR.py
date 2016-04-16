@@ -3,7 +3,7 @@
 
 inpath = '/home/pobrecht/Dropbox/ML310/Week1/mnist/data/'
 outpath = '/home/pobrecht/Dropbox/ML310/Week1/mnist/'
-prefix = 'TwoScale'
+prefix = 'ThreeScale'
 KsToTry = 5
 njobs = 20
 
@@ -28,6 +28,95 @@ seed(8675309)
 
 #===========================================================================
 # FUNCTIONS
+
+# compute row and col averages
+# def rcAvg(inObj, gridSqDim):
+#     """This takes in a list of lists, representing a NxN square grid with by-row loading
+#     and returns a list of tuples: [(row avg 1, col avg 1), (row avg 2, col avg 2), ...]
+#     """
+#     flt = float(gridSqDim)
+#     rowAvg = []
+#     colAvg = []
+#     for row in inObj: # row avg
+#         ra = sum(row)/flt
+#         rowAvg.append(ra)
+#     for col in range(0, gridSqDim): # col avg
+#         ca = sum([inObj[i][col] for i in range(0, gridSqDim)])/flt
+#         colAvg.append(ca)
+#     zipped = zip(rowAvg, colAvg) # create list of tuples
+#     return zipped
+
+# halve the resolution
+# def rcTwoScale(inObj, gridSqDim):
+#     flt = float(4)
+#     newgrid = []
+#     for i in range(0, gridSqDim-1, 2): # row avg
+#         n = []
+#         for j in range(0, gridSqDim-1, 2):
+#             ap = (inObj[i][j]+inObj[i+1][j]+inObj[i][j+1]+inObj[i+1][j+1])/flt
+#             newgrid.append(ap)
+#     return newgrid
+
+# compute mean, std, and pct of white space within bounding box
+# def rcSummary(inObj, gridSqDim):
+#     """This takes in a list of lists, representing a NxN square grid with by-row loading
+#     and returns a list of tuples: [(row avg 1, col avg 1), (row avg 2, col avg 2), ...]
+#     """
+#     flt = float(gridSqDim)
+#     rowAvg = [] # row average
+#     colAvg = [] # col average
+
+#     i = 0
+#     rz = []
+#     for row in inObj: # row avg
+#         ra = sum(row)/flt
+#         rowAvg.append(ra) # append to list of row avgs for this grid
+#         if ra > 0:
+#             rz.append(i)
+#         i += 1
+
+#     i = 0
+#     cz = []
+#     for col in range(0, gridSqDim): # col avg
+#         ca = sum([inObj[i][col] for i in range(0, gridSqDim)])/flt
+#         colAvg.append(ca) # append to list of col avgs for this grid
+#         if ca > 0:
+#             cz.append(col)
+#         i += 1
+
+#     c1 = cov(rowAvg, colAvg)
+#     outObj = [float(c1[i][j]) for i in range(2) for j in range(2)]
+#     cond = [inObj[i][j] for i in rz for j in cz]
+#     condWhite = cond.count(0)/float(len(cond))
+
+#     outObj.append(condWhite) # four covariance matrix entries plus the % empty pixes in the character bounding box
+#     return outObj
+
+# compute mean, std, and pct of white space within bounding box
+# def rcSummary2(inObj, gridSqDim):
+#     """This takes in a list of lists, representing a NxN square grid with by-row loading
+#     and returns a list of tuples: [(row avg 1, col avg 1), (row avg 2, col avg 2), ...]
+#     """
+#     flt = float(gridSqDim)
+#     rowAvg = [] # row average
+#     colAvg = [] # col average
+#     perimTot = 0
+
+#     for row in inObj: # row avg
+#         ra = sum(row)/flt
+#         rowAvg.append(ra) # append to list of row avgs for this grid
+#         term1 = sum([row[i] == 0 and row[i+1] > 0 for i in range(gridSqDim-1)])
+#         term2 = sum([row[i] > 0 and row[i+1] == 0 for i in range(gridSqDim-1)])
+#         perimTot += (term1 + term2)
+
+#     for col in range(0, gridSqDim): # col avg
+#         ca = sum([inObj[i][col] for i in range(0, gridSqDim)])/flt
+#         colAvg.append(ca) # append to list of col avgs for this grid
+#         term1 = sum([inObj[i][col] == 0 and inObj[i+1][col] > 0 for i in range(gridSqDim-1)])
+#         term2 = sum([inObj[i][col] > 0 and inObj[i+1][col] == 0 for i in range(gridSqDim-1)])
+#         perimTot += (term1 + term2)
+
+#     return perimTot
 
 # Read csv matrix into list of lists
 def readCSV(inFile):
@@ -63,35 +152,7 @@ def rowToGrid(inObj, rowLen, gridSqDim):
         outObj.append(grid)
     return outObj
 
-# compute row and col averages
-def rcAvg(inObj, gridSqDim):
-    """This takes in a list of lists, representing a NxN square grid with by-row loading
-    and returns a list of tuples: [(row avg 1, col avg 1), (row avg 2, col avg 2), ...]
-    """
-    flt = float(gridSqDim)
-    rowAvg = []
-    colAvg = []
-    for row in inObj: # row avg
-        ra = sum(row)/flt
-        rowAvg.append(ra)
-    for col in range(0, gridSqDim): # col avg
-        ca = sum([inObj[i][col] for i in range(0, gridSqDim)])/flt
-        colAvg.append(ca)
-    zipped = zip(rowAvg, colAvg) # create list of tuples
-    return zipped
-
-# halve the resolution
-def rcTwoScale(inObj, gridSqDim):
-    flt = float(4)
-    newgrid = []
-    for i in range(0, gridSqDim-1, 2): # row avg
-        n = []
-        for j in range(0, gridSqDim-1, 2):
-            ap = (inObj[i][j]+inObj[i+1][j]+inObj[i][j+1]+inObj[i+1][j+1])/flt
-            newgrid.append(ap)
-    return newgrid
-
-# halve the resolution
+# halve the resolution and halve it again (Zeno here we come)
 def rcThreeScale(inObj, gridSqDim):
     flt = float(4)
     newgrid = []
@@ -105,67 +166,6 @@ def rcThreeScale(inObj, gridSqDim):
             newgrid.append(ap)
     return newgrid
 
-
-# compute mean, std, and pct of white space within bounding box
-def rcSummary(inObj, gridSqDim):
-    """This takes in a list of lists, representing a NxN square grid with by-row loading
-    and returns a list of tuples: [(row avg 1, col avg 1), (row avg 2, col avg 2), ...]
-    """
-    flt = float(gridSqDim)
-    rowAvg = [] # row average
-    colAvg = [] # col average
-
-    i = 0
-    rz = []
-    for row in inObj: # row avg
-        ra = sum(row)/flt
-        rowAvg.append(ra) # append to list of row avgs for this grid
-        if ra > 0:
-            rz.append(i)
-        i += 1
-
-    i = 0
-    cz = []
-    for col in range(0, gridSqDim): # col avg
-        ca = sum([inObj[i][col] for i in range(0, gridSqDim)])/flt
-        colAvg.append(ca) # append to list of col avgs for this grid
-        if ca > 0:
-            cz.append(col)
-        i += 1
-
-    c1 = cov(rowAvg, colAvg)
-    outObj = [float(c1[i][j]) for i in range(2) for j in range(2)]
-    cond = [inObj[i][j] for i in rz for j in cz]
-    condWhite = cond.count(0)/float(len(cond))
-
-    outObj.append(condWhite) # four covariance matrix entries plus the % empty pixes in the character bounding box
-    return outObj
-
-# compute mean, std, and pct of white space within bounding box
-def rcSummary2(inObj, gridSqDim):
-    """This takes in a list of lists, representing a NxN square grid with by-row loading
-    and returns a list of tuples: [(row avg 1, col avg 1), (row avg 2, col avg 2), ...]
-    """
-    flt = float(gridSqDim)
-    rowAvg = [] # row average
-    colAvg = [] # col average
-    perimTot = 0
-
-    for row in inObj: # row avg
-        ra = sum(row)/flt
-        rowAvg.append(ra) # append to list of row avgs for this grid
-        term1 = sum([row[i] == 0 and row[i+1] > 0 for i in range(gridSqDim-1)])
-        term2 = sum([row[i] > 0 and row[i+1] == 0 for i in range(gridSqDim-1)])
-        perimTot += (term1 + term2)
-
-    for col in range(0, gridSqDim): # col avg
-        ca = sum([inObj[i][col] for i in range(0, gridSqDim)])/flt
-        colAvg.append(ca) # append to list of col avgs for this grid
-        term1 = sum([inObj[i][col] == 0 and inObj[i+1][col] > 0 for i in range(gridSqDim-1)])
-        term2 = sum([inObj[i][col] > 0 and inObj[i+1][col] == 0 for i in range(gridSqDim-1)])
-        perimTot += (term1 + term2)
-
-    return perimTot
 
 # compute row col averages for each 28x28 image and
 # append those averages to the training and validation data
