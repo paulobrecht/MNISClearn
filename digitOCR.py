@@ -3,7 +3,8 @@
 
 inpath = '/home/pobrecht/Dropbox/ML310/Week1/mnist/data/'
 outpath = '/home/pobrecht/Dropbox/ML310/Week1/mnist/'
-KsToTry = range(1, 15)
+prefix = 'covwhite'
+KsToTry = range(1, 10)
 
 
 
@@ -113,6 +114,32 @@ def rcSummary(inObj, gridSqDim):
     outObj.append(condWhite) # four covariance matrix entries plus the % empty pixes in the character bounding box
     return outObj
 
+# compute mean, std, and pct of white space within bounding box
+def rcSummary2(inObj, gridSqDim):
+    """This takes in a list of lists, representing a NxN square grid with by-row loading
+    and returns a list of tuples: [(row avg 1, col avg 1), (row avg 2, col avg 2), ...]
+    """
+    flt = float(gridSqDim)
+    rowAvg = [] # row average
+    colAvg = [] # col average
+    perimTot = 0
+
+    for row in inObj: # row avg
+        ra = sum(row)/flt
+        rowAvg.append(ra) # append to list of row avgs for this grid
+        term1 = sum([row[i] == 0 and row[i+1] > 0 for i in range(gridSqDim-1)])
+        term2 = sum([row[i] > 0 and row[i+1] == 0 for i in range(gridSqDim-1)])
+        perimTot += (term1 + term2)
+
+    for col in range(0, gridSqDim): # col avg
+        ca = sum([inObj[i][col] for i in range(0, gridSqDim)])/flt
+        colAvg.append(ca) # append to list of col avgs for this grid
+        term1 = sum([inObj[i][col] == 0 and inObj[i+1][col] > 0 for i in range(gridSqDim-1)])
+        term2 = sum([inObj[i][col] > 0 and inObj[i+1][col] == 0 for i in range(gridSqDim-1)])
+        perimTot += (term1 + term2)
+
+    return perimTot
+
 # compute row col averages for each 28x28 image and
 # append those averages to the training and validation data
 def gridAppend(inObj1, inObj2, gridSqDim):
@@ -156,9 +183,9 @@ for i in index:
     x2shuf.append(x2[i])
     y2shuf.append(y2[i])
 
-# model selection on a random 20% sample of the training data
-x2shuf = x2shuf[1:len(x2)/5]
-y2shuf = y2shuf[1:len(x2)/5]
+# model selection on a random 25% sample of the training data
+x2shuf = x2shuf[1:len(x2)/4]
+y2shuf = y2shuf[1:len(x2)/4]
 #x2shuf = x2shuf[1:100] #testing
 #y2shuf = y2shuf[1:100] #testing
 
@@ -193,7 +220,7 @@ for train, test in kf: # iterate over folds
         # save the correct prediction rate to a tuple for evaluation after the loop has completed
         # this should be a dict with k as the key, someday when I have time
         myresult = (k, loop, c, len(pred))
-        results.append(myresult) 
+        results.append(myresult)
         print("Finished Loop " + str(loop+1) + " for K = " + str(k))
     loop += 1
 
@@ -210,16 +237,25 @@ for k in KsToTry:
 
 orderedResults = sorted(collatedResults.iteritems(), key=lambda x: x[1], reverse=True)
 
+z3 = open(outpath + prefix + '_submission10k_facts2.txt', 'w')
+print>>z3, orderedResults
 
+z4 = open(outpath + prefix + '_submission10k_facts3.txt', 'w')
+print>>z4, wrong
 
 #===========================================================================
 # SCORE THE VALIDATION DATA
 
 optimalK = orderedResults[0][0] # choose the best-performing K
 
+z2 = open(outpath + prefix + '_submission10k_facts1.txt', 'w')
+print>>z2, optimalK
+
 knn = KNeighborsClassifier(n_neighbors=optimalK, n_jobs=20) # train with optimalK
+print("Fitting on whole population of training data with K = " + str(optimalK) + "...")
 knn.fit(x2, ravel(y2)) # train on entire training dataset
-knn.fit(x2[1:100], ravel(y2[1:100])) # testing
+# knn.fit(x2[1:100], ravel(y2[1:100])) # testing
+print("Predicting on test data...")
 pred = knn.predict(t2) # score the validation data
 
 
@@ -227,15 +263,6 @@ pred = knn.predict(t2) # score the validation data
 #===========================================================================
 # OUTPUT
 
-z = open(outpath + 'compusrv_submission10k.csv', 'w')
+z = open(outpath + prefix + '_submission10k.csv', 'w')
 for value in pred:
   print>>z, value
-
-z2 = open(outpath + 'compusrv_submission10k_facts1.txt', 'w')
-print>>z2, optimalK
-
-z3 = open(outpath + 'compusrv_submission10k_facts2.txt', 'w')
-print>>z3, orderedResults
-
-z3 = open(outpath + 'compusrv_submission10k_facts3.txt', 'w')
-print>>z3, wrong
